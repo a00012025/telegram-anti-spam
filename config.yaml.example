@@ -1,0 +1,22 @@
+# Telegram Bot 設定
+telegram_bot_token: "YOUR_BOT_TOKEN_HERE"
+target_chat_id: 0  # 你的群組 ID (負數)
+
+# OpenAI 設定
+openai_api_key: "YOUR_OPENAI_API_KEY_HERE"
+spam_threshold: 8.0  # 垃圾訊息評分門檻 (0-10)
+daily_api_limit: 1000
+
+# 處罰設定
+violation_reset_days: 30
+
+# Dry Run 模式（測試用）
+# 開啟後只會記錄垃圾訊息，不會執行刪除/踢人/封鎖
+dry_run: false
+
+# 白名單 (user_id 列表)
+whitelist: []
+
+# 日誌設定
+log_level: INFO
+log_file: bot.log

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(brainstorming)",
+      "Skill(brainstorming:*)",
+      "Bash(chmod:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
