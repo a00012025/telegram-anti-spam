@@ -19,16 +19,20 @@ class MessageHandler:
         punishment_manager: PunishmentManager,
         whitelist_manager: WhitelistManager,
         rate_limiter: RateLimiter,
-        dry_run: bool = False
+        dry_run: bool = False,
+        enable_whitelist: bool = True
     ):
         self.spam_detector = spam_detector
         self.punishment = punishment_manager
         self.whitelist = whitelist_manager
         self.rate_limiter = rate_limiter
         self.dry_run = dry_run
+        self.enable_whitelist = enable_whitelist
 
         if self.dry_run:
             logger.warning("🔧 DRY RUN MODE ENABLED - No actions will be taken, only logging")
+        if not self.enable_whitelist:
+            logger.warning("⚠️ WHITELIST DISABLED - All messages will be checked, including admins")
 
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
@@ -56,8 +60,8 @@ class MessageHandler:
 
         logger.debug(f"Processing message from user {user_id} ({username}): {message_text[:50]}...")
 
-        # 檢查白名單
-        if self.whitelist.is_whitelisted(user_id):
+        # 檢查白名單（如果啟用）
+        if self.enable_whitelist and self.whitelist.is_whitelisted(user_id):
             logger.debug(f"User {user_id} is whitelisted, skipping check")
             return
 

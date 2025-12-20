@@ -14,8 +14,9 @@ violation_reset_days: 30
 # 開啟後只會記錄垃圾訊息，不會執行刪除/踢人/封鎖
 dry_run: false
 
-# 白名單 (user_id 列表)
-whitelist: []
+# 白名單設定
+enable_whitelist: true  # 設為 false 則檢查所有訊息，包括管理員
+whitelist: []  # user_id 列表
 
 # 日誌設定
 log_level: INFO
