@@ -1,7 +1,8 @@
 import json
 import logging
-from typing import Tuple
+from typing import Tuple, Optional, List
 from openai import AsyncOpenAI
+import base64
 
 logger = logging.getLogger("telegram_bot")
 
@@ -126,3 +127,118 @@ class SpamDetector:
             logger.error(f"Failed to parse LLM response: {e}, response: {response}")
             # 解析失敗時返回安全的預設值
             return (0.0, "解析回應失敗")
+
+    async def check_image(self, image_data: bytes, caption: Optional[str] = None) -> Tuple[bool, float, str]:
+        """
+        檢查圖片是否包含垃圾訊息（如合約曬單）
+
+        Args:
+            image_data: 圖片的二進制數據
+            caption: 圖片說明文字（可選）
+
+        Returns:
+            (is_spam, score, reasoning)
+        """
+        try:
+            # 將圖片轉換為 base64
+            base64_image = base64.b64encode(image_data).decode('utf-8')
+
+            prompt = self._build_image_prompt(caption)
+            response = await self._call_openai_vision(prompt, base64_image)
+            score, reasoning = self._parse_response(response)
+
+            is_spam = score >= self.threshold
+            logger.info(f"Image checked: score={score:.1f}, is_spam={is_spam}")
+
+            return (is_spam, score, reasoning)
+
+        except Exception as e:
+            logger.error(f"Error checking image: {e}", exc_info=True)
+            # 發生錯誤時，返回安全的預設值（不判定為垃圾訊息）
+            return (False, 0.0, f"圖片檢測錯誤: {str(e)}")
+
+    def _build_image_prompt(self, caption: Optional[str] = None) -> str:
+        """構建圖片檢測的 prompt"""
+        base_prompt = """你是 KryptoGO 加密貨幣交易討論群的垃圾訊息檢測助手。
+
+群組性質：這是一個專業的加密貨幣交易討論群。
+
+請分析這張圖片，判斷是否為垃圾訊息。特別注意以下類型：
+
+1. **合約曬單**：
+   - 顯示交易盈虧的截圖（如 +685.54%、永續做空 35x 等）
+   - 顯示高額收益的交易記錄
+   - 顯示槓桿交易的盈利
+   - 目的是炫耀收益或吸引他人跟單
+
+2. **推銷廣告**：
+   - 帶有邀請碼、推薦連結的圖片
+   - 帶有 QR Code 並要求掃碼的圖片
+   - 帶有「穩賺」「保證獲利」等字樣
+
+3. **私下拉人**：
+   - 要求加 LINE、微信、Telegram 私訊的圖片
+   - 帶有聯繫方式的廣告圖
+
+正常圖片包括：
+- 價格走勢圖、K線圖、技術分析圖表
+- 新聞截圖、項目資訊
+- 純粹的技術討論圖片
+
+請評估這張圖片，給出 0-10 分的垃圾訊息評分：
+- 0-3 分：正常的技術分析或討論圖片
+- 4-6 分：有點可疑但可能是正常分享
+- 7 分：可疑
+- 8-10 分：明確的垃圾訊息（合約曬單、推銷廣告等）
+"""
+
+        if caption:
+            base_prompt += f"\n\n圖片說明文字：\n\"\"\"{caption}\"\"\"\n"
+
+        base_prompt += """
+請以 JSON 格式回應：
+{
+    "score": <0-10的數字>,
+    "reasoning": "<簡短說明判斷理由，描述圖片內容，50字以內>"
+}"""
+
+        return base_prompt
+
+    async def _call_openai_vision(self, prompt: str, base64_image: str) -> str:
+        """呼叫 OpenAI Vision API"""
+        try:
+            response = await self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "你是一個專業的垃圾訊息檢測助手，只回應 JSON 格式。"
+                    },
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": prompt
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{base64_image}"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                temperature=0.3,
+                max_tokens=300,
+                response_format={"type": "json_object"}
+            )
+
+            content = response.choices[0].message.content
+            logger.debug(f"OpenAI Vision response: {content}")
+            return content
+
+        except Exception as e:
+            logger.error(f"OpenAI Vision API error: {e}", exc_info=True)
+            raise

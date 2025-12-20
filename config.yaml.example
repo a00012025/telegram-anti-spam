@@ -18,6 +18,11 @@ dry_run: false
 enable_whitelist: true  # 設為 false 則檢查所有訊息，包括管理員
 whitelist: []  # user_id 列表
 
+# 圖片檢測設定
+# 開啟後會使用 OpenAI Vision API 檢測圖片（如合約曬單）
+# 注意：Vision API 消耗的 token 較多，會影響 daily_api_limit
+enable_image_detection: true
+
 # 日誌設定
 log_level: INFO
 log_file: bot.log

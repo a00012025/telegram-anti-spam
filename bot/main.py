@@ -170,13 +170,25 @@ def main():
             whitelist_manager=whitelist_manager
         )
 
-        # 註冊訊息處理器
+        # 註冊訊息處理器（文字訊息）
         app.add_handler(
             TelegramMessageHandler(
                 filters.TEXT & ~filters.COMMAND & filters.ChatType.GROUPS,
                 message_handler.handle_message
             )
         )
+
+        # 註冊圖片處理器（如果啟用圖片檢測）
+        if config.get('enable_image_detection', True):
+            app.add_handler(
+                TelegramMessageHandler(
+                    filters.PHOTO & filters.ChatType.GROUPS,
+                    message_handler.handle_photo
+                )
+            )
+            logger.info("Image detection enabled")
+        else:
+            logger.info("Image detection disabled")
 
         # 註冊管理員指令
         app.add_handler(TelegramCommandHandler("stats", command_handler.stats_command))

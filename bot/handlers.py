@@ -116,3 +116,95 @@ class MessageHandler:
                 exc_info=True
             )
             # 錯誤時不處罰用戶，避免誤判
+
+    async def handle_photo(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        處理群組圖片訊息（包括轉發的圖片）
+
+        檢查流程：
+        1. 檢查是否為白名單用戶
+        2. 檢查 API 配額
+        3. 下載圖片
+        4. 使用 LLM Vision API 檢測垃圾圖片（如合約曬單）
+        5. 執行相應處罰
+        """
+        message = update.message
+
+        # 確保訊息有圖片
+        if not message or not message.photo:
+            return
+
+        user_id = message.from_user.id
+        username = message.from_user.username or message.from_user.first_name
+        caption = message.caption or ""
+
+        logger.debug(f"Processing photo from user {user_id} ({username}), caption: {caption[:50] if caption else 'No caption'}...")
+
+        # 檢查白名單（如果啟用）
+        if self.enable_whitelist and self.whitelist.is_whitelisted(user_id):
+            logger.debug(f"User {user_id} is whitelisted, skipping check")
+            return
+
+        # 檢查 API 配額
+        can_call = await self.rate_limiter.can_call_api()
+        if not can_call:
+            remaining = await self.rate_limiter.get_remaining()
+            logger.warning(
+                f"Daily API limit reached, skipping photo detection for user {user_id}"
+            )
+            if remaining == 0:
+                logger.error("⚠️ API daily limit reached! No more spam detection today.")
+            return
+
+        # 下載圖片並檢測
+        try:
+            # 取得最大尺寸的圖片
+            photo = message.photo[-1]
+            photo_file = await context.bot.get_file(photo.file_id)
+
+            # 下載圖片到記憶體
+            import io
+            photo_bytes = io.BytesIO()
+            await photo_file.download_to_memory(photo_bytes)
+            photo_data = photo_bytes.getvalue()
+
+            # 使用 LLM Vision 檢測圖片
+            is_spam, score, reasoning = await self.spam_detector.check_image(
+                image_data=photo_data,
+                caption=caption if caption else None
+            )
+            await self.rate_limiter.increment()
+
+            logger.info(
+                f"Photo checked: user={user_id}, username={username}, "
+                f"score={score:.1f}, is_spam={is_spam}, reasoning={reasoning}"
+            )
+
+            # 如果是垃圾訊息，執行處罰
+            if is_spam:
+                if self.dry_run:
+                    # Dry Run 模式：只記錄，不執行處罰
+                    logger.warning(
+                        f"🔍 [DRY RUN] Spam photo detected! user={user_id}, username={username}, "
+                        f"score={score:.1f}, reasoning={reasoning}\n"
+                        f"Caption: {caption}"
+                    )
+                else:
+                    # 正常模式：執行處罰
+                    action = await self.punishment.handle_spam(
+                        user_id=user_id,
+                        username=username,
+                        message=message,
+                        llm_score=score
+                    )
+                    logger.warning(
+                        f"🚨 Spam photo detected! user={user_id}, username={username}, "
+                        f"score={score:.1f}, action={action}"
+                    )
+
+        except Exception as e:
+            logger.error(
+                f"Error processing photo from user {user_id}: {e}",
+                exc_info=True
+            )
+            # 錯誤時不處罰用戶，避免誤判
