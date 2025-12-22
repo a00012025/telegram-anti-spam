@@ -212,12 +212,29 @@ def main():
     app.post_init = setup_bot
 
     try:
-        # 開始輪詢
+        # 開始輪詢，設定重試次數
         logger.info("Bot is running... Press Ctrl+C to stop.")
-        app.run_polling(
-            allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=True
-        )
+        max_retries = config.get('max_retries', 5)
+        retry_count = 0
+
+        while retry_count < max_retries:
+            try:
+                app.run_polling(
+                    allowed_updates=Update.ALL_TYPES,
+                    drop_pending_updates=True
+                )
+                break  # 如果成功運行則跳出循環
+            except Exception as e:
+                retry_count += 1
+                if retry_count >= max_retries:
+                    logger.error(f"Failed after {max_retries} retries: {e}")
+                    raise
+
+                import asyncio
+                wait_time = min(2 ** retry_count, 60)  # 指數退避，最多60秒
+                logger.warning(f"Connection failed (attempt {retry_count}/{max_retries}), retrying in {wait_time}s... Error: {e}")
+                import time
+                time.sleep(wait_time)
     except KeyboardInterrupt:
         logger.info("Received shutdown signal...")
     except Exception as e:
