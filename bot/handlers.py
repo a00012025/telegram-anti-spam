@@ -60,9 +60,44 @@ class MessageHandler:
 
         logger.debug(f"Processing message from user {user_id} ({username}): {message_text[:50]}...")
 
+        # 檢測是否回覆了不存在於本群組的訊息（跨群組回覆，常見於垃圾訊息）
+        is_cross_group_reply = False
+        if message.reply_to_message:
+            # 檢查被回覆的訊息是否來自不同的群組
+            replied_chat_id = message.reply_to_message.chat.id
+            current_chat_id = message.chat.id
+
+            # 如果回覆的訊息來自不同的群組，這是跨群組回覆
+            if replied_chat_id != current_chat_id:
+                is_cross_group_reply = True
+                logger.warning(
+                    f"Detected cross-group reply from user {user_id}: "
+                    f"current_chat={current_chat_id}, replied_chat={replied_chat_id}"
+                )
+
         # 檢查白名單（如果啟用）
         if self.enable_whitelist and self.whitelist.is_whitelisted(user_id):
             logger.debug(f"User {user_id} is whitelisted, skipping check")
+            return
+
+        # 如果檢測到跨群組回覆，直接判定為垃圾訊息
+        if is_cross_group_reply:
+            logger.warning(f"Auto-detected spam: cross-group reply from user {user_id}")
+            if self.dry_run:
+                logger.warning(
+                    f"🔍 [DRY RUN] Cross-group reply spam detected! user={user_id}, username={username}\n"
+                    f"Message: {message_text}"
+                )
+            else:
+                action = await self.punishment.handle_spam(
+                    user_id=user_id,
+                    username=username,
+                    message=message,
+                    llm_score=10.0  # 最高分，直接判定為垃圾訊息
+                )
+                logger.warning(
+                    f"🚨 Cross-group reply spam! user={user_id}, username={username}, action={action}"
+                )
             return
 
         # 檢查 API 配額
