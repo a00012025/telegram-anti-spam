@@ -60,20 +60,37 @@ class MessageHandler:
 
         logger.debug(f"Processing message from user {user_id} ({username}): {message_text[:50]}...")
 
+        # Debug: 檢查訊息的回覆狀態
+        logger.debug(
+            f"Message reply info: "
+            f"is_topic_message={message.is_topic_message}, "
+            f"reply_to_message={'exists' if message.reply_to_message else 'None'}, "
+            f"message_thread_id={message.message_thread_id}"
+        )
+
         # 檢測是否回覆了不存在於本群組的訊息（跨群組回覆，常見於垃圾訊息）
         is_cross_group_reply = False
+
+        # 情況1: reply_to_message 存在且來自不同群組
         if message.reply_to_message:
-            # 檢查被回覆的訊息是否來自不同的群組
             replied_chat_id = message.reply_to_message.chat.id
             current_chat_id = message.chat.id
 
-            # 如果回覆的訊息來自不同的群組，這是跨群組回覆
             if replied_chat_id != current_chat_id:
                 is_cross_group_reply = True
                 logger.warning(
-                    f"Detected cross-group reply from user {user_id}: "
+                    f"Detected cross-group reply (case 1) from user {user_id}: "
                     f"current_chat={current_chat_id}, replied_chat={replied_chat_id}"
                 )
+
+        # 情況2: 訊息看起來像回覆但 reply_to_message 是 None（回覆不存在的訊息）
+        # 檢查訊息是否有 reply_to_message_id 但沒有 reply_to_message 物件
+        elif hasattr(message, 'reply_to_message_id') and message.reply_to_message_id:
+            is_cross_group_reply = True
+            logger.warning(
+                f"Detected cross-group reply (case 2) from user {user_id}: "
+                f"has reply_to_message_id={message.reply_to_message_id} but reply_to_message is None"
+            )
 
         # 檢查白名單（如果啟用）
         if self.enable_whitelist and self.whitelist.is_whitelisted(user_id):
