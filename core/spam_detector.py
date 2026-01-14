@@ -10,7 +10,7 @@ logger = logging.getLogger("telegram_bot")
 class SpamDetector:
     """LLM 垃圾訊息檢測器"""
 
-    def __init__(self, openai_api_key: str, threshold: float = 8.0):
+    def __init__(self, openai_api_key: str, threshold: float = 9.0):
         """
         初始化檢測器
 
