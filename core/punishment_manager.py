@@ -27,7 +27,7 @@ class PunishmentManager:
     async def handle_spam(self, user_id: int, username: Optional[str],
                          message: Message, llm_score: float) -> str:
         """
-        處理垃圾訊息，根據違規次數執行相應處罰
+        處理垃圾訊息，只刪除訊息不處罰用戶
 
         Args:
             user_id: 用戶 ID
@@ -36,11 +36,8 @@ class PunishmentManager:
             llm_score: LLM 評分
 
         Returns:
-            執行的動作 ('warning', 'kick', 'ban')
+            執行的動作 ('delete')
         """
-        # 檢查並更新違規次數
-        violation_count = await self.db.increment_violation(user_id, username)
-
         # 刪除垃圾訊息
         try:
             await message.delete()
@@ -48,18 +45,7 @@ class PunishmentManager:
         except TelegramError as e:
             logger.error(f"Failed to delete message: {e}")
 
-        # 根據違規次數執行處罰
-        if violation_count == 1:
-            # 第一次：警告
-            action = await self._warn_user(user_id, username, message.chat_id)
-
-        elif violation_count == 2:
-            # 第二次：踢出
-            action = await self._kick_user(user_id, username, message.chat_id)
-
-        else:  # >= 3
-            # 第三次：永久封鎖
-            action = await self._ban_user(user_id, username, message.chat_id)
+        action = "delete"
 
         # 記錄到資料庫
         await self.db.log_spam(
@@ -72,7 +58,7 @@ class PunishmentManager:
 
         logger.info(
             f"Spam handled: user={user_id}, username={username}, "
-            f"violation_count={violation_count}, action={action}, score={llm_score:.1f}"
+            f"action={action}, score={llm_score:.1f}"
         )
 
         return action

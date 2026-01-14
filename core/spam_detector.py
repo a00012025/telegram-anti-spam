@@ -65,6 +65,7 @@ class SpamDetector:
 - 詢問 KryptoGO 產品功能或服務（如「電報推送資格怎麼領取」「會員怎麼開通」「VIP 怎麼加入」等，這些是用戶在詢問我們的產品，不是垃圾訊息）
 - 提及 KryptoGO 相關的群組/頻道（如「KryptoGO VIP」「KryptoGO 官方」等是我們自己的群組，不是垃圾訊息）
 - **KryptoGO 產品功能介紹或詢問**：如果訊息提到 PRO、吸籌、集群、信號、監控等功能描述，這是在介紹或詢問我們的產品功能，不是垃圾訊息。例如「全网集群吸筹监控，需要 PRO，当任何代币出现吸筹信号时立即通知您」這類訊息是 KryptoGO 的功能說明，應評為 0-3 分
+- **分享合約地址/代幣地址**（如 Solana pump.fun 地址「2nP9yKQNSGQy851iyawDvBkzkK2R2aqKArQCKc2gpump」、ERC-20 地址「0xe0cd4cacddcbf4f36e845407ce53e87717b6601d」等區塊鏈合約地址，這是正常的代幣討論）
 
 垃圾訊息定義：
 1. **格式化交易信號**（直接提供進場點位和多個目標價位的格式化信號，例如「#BTC 2.25附近🈳 目標2.19—2.15—2.08」「進場50000 目標48000-46000-44000」等）
@@ -85,6 +86,7 @@ class SpamDetector:
   ⚠️ 其他所有群組/頻道推廣（如 @BTC_crypto888、@xxx_trading 等）都是垃圾訊息，應評為 8-10 分
 - 正常討論可能會提到「我在 X 價位進場」或「目標看到 Y」，但不會使用高度格式化的「進場點—目標1—目標2—目標3」這種信號格式
 - 如果訊息同時包含「加入頻道」等引導文字和交易信號，更是明確的垃圾訊息
+- **合約地址/代幣地址不是垃圾訊息**：像「2nP9yKQNSGQy851iyawDvBkzkK2R2aqKArQCKc2gpump」或「0xe0cd4cacddcbf4f36e845407ce53e87717b6601d」這類區塊鏈合約地址（包括 Solana pump.fun 地址、ERC-20 地址等）是正常的代幣討論，應評為 0-3 分
 
 請評估以下訊息，給出 0-10 分的垃圾訊息評分：
 - 0-3 分：完全正常的交易討論
@@ -209,6 +211,7 @@ class SpamDetector:
 - 純粹的技術討論圖片
 - **來自 KryptoGO VIP 群組的圖片**（包含「KryptoGO VIP」「KryptoGO 會員」等字樣的圖片是我們自己的群組，應評為 0-3 分）
 - **KryptoGO 產品功能介紹圖片**：如果圖片或說明文字提到 PRO、吸籌、集群、信號、監控等 KryptoGO 功能描述，這是產品功能介紹，不是垃圾訊息，應評為 0-3 分
+- **包含合約地址/代幣地址的圖片**（如 Solana pump.fun 地址「2nP9yKQNSGQy851iyawDvBkzkK2R2aqKArQCKc2gpump」或 ERC-20 地址「0xe0cd4cacddcbf4f36e845407ce53e87717b6601d」等區塊鏈合約地址，這是正常的代幣討論）
 
 ⚠️ 特別注意：
 - 如果圖片包含「KryptoGO VIP」「KryptoGO 會員」「KryptoGO 官方」等字樣，這是我們自己的群組內容，不是垃圾訊息，應評為 0-3 分
